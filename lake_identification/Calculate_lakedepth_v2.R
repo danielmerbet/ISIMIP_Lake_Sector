@@ -22,7 +22,8 @@ library(sf);library(raster);library(matrixStats)
 
 ## Function to calculate real areas of each pixel according to latitude degree (Earth distortion)
 #This is needed to select the big lakes for each pixel
-areakm2lat <- function(latitude, resolution=0.5, R=6371007){
+res <- 0.0625 #resolution of the final file 
+areakm2lat <- function(latitude, resolution=res, R=6371007){
   # R=6371007m is the authalic earth radius at equator
   
   height <- resolution*pi/180*R #height of the cells, same value for the whole grid
@@ -55,18 +56,19 @@ for (v in 1:length(var_vector)){ #vector of data to be saved from HydroLAKES dat
 #empty matrix to save all position of the big lakes > 0.5 degrees
 wm_biglakes <- matrix(data = NA, nrow=360, ncol = 720) #empty matrix to save all weighted median map for depth
 
+
 c_lon <- 0; 
-for (lon in seq(-180, 179.5, 0.5)){ #loop in longitude
+for (lon in seq(-180, 179.5, res)){ #loop in longitude
   c_lon <- c_lon+1; c_lat <- 0
-  for (lat in seq(90, -89.5, -0.5)){ #loop in latitude
+  for (lat in seq(90, -89.5, -res)){ #loop in latitude
     c_lat <- c_lat+1
-    pos_lakes <- which( (HL_df$X>lon & HL_df$X<=(lon+0.5)) & (HL_df$Y<lat & HL_df$Y>=(lat-0.5)) ) 
+    pos_lakes <- which( (HL_df$X>lon & HL_df$X<=(lon+res)) & (HL_df$Y<lat & HL_df$Y>=(lat-res)) ) 
     if (length(pos_lakes)>0){  #only doing something when having a lake
       print(paste("start lon:", lon, "and lat:", lat))  
       max_val <- max(HL_df$Lake_area[pos_lakes]) #greater area of the lakes contained in the pixel
-      if(max_val>areakm2lat(lat)){ #looking for lake areas > 0.5 degrees
+      if(max_val>areakm2lat(lat)){ #looking for lake areas > res in degrees
         posbig_max <- which(HL_df$Lake_area[pos_lakes]==max_val)
-        wm_biglakes[c_lat,c_lon] <- HL_df$Hylak_id[pos_lakes[posbig_max]] #save id of lakes with area > 0.5 degrees
+        wm_biglakes[c_lat,c_lon] <- HL_df$Hylak_id[pos_lakes[posbig_max]] #save id of lakes with area > res in degrees
       }
       wm_temp <- weightedMedian(HL_df$Depth_avg[pos_lakes],HL_df$Lake_area[pos_lakes],interpolate=F, ties="max") #weighted median calculation
       wm_matrix[c_lat,c_lon] <- wm_temp #add to final matrix
